@@ -19,11 +19,7 @@ import sys
 import os.path
 import json
 
-__author__ = """\
-  /\/\   ___  _ __ __ _ _ __  
- /    \ / _ \| '__/ _` | '_ \ 
-/ /\/\ \ (_) | | | (_| | | | |
-\/    \/\___/|_|  \__,_|_| |_|"""
+__author__ = "zyk"
 
 # 操作文件时使用的可重入互斥锁，用于保证线程安全
 FILELOCK = threading.Lock()

@@ -28,7 +28,7 @@ proxyPort = "9020"
 proxyUser = ""
 proxyPass = ""
 
-proxyMeta = "http://%(user)s:%(pass)s@%(host)s:%(port)s" % {
+proxyMeta = "http://%(host)s:%(port)s" % {
     "host": proxyHost,
     "port": proxyPort,
     #"user": proxyUser,
@@ -47,7 +47,7 @@ def get_ip_list(url, headers):
     ip_list = []
     for i in range(1, len(ips)):
         ip_info = ips[i]
-        print(ip_info)
+        #print(ip_info)
         tds = ip_info.find_all('td')
         ip_list.append(tds[1].text + ':' + tds[2].text)
     return ip_list

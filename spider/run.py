@@ -36,7 +36,7 @@ df = DataFile()
 crawl = Crawl()
 
 # 工作线程的数量
-threads_numbers = 1
+threads_numbers = 20
 
 
 class MasterThread(Thread):

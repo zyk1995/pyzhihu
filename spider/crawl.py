@@ -16,13 +16,10 @@ Info
 import requests
 from bs4 import BeautifulSoup
 import json
-import proxy
+from proxy import getproxies
 
-__author__ = """\
-  /\/\   ___  _ __ __ _ _ __  
- /    \ / _ \| '__/ _` | '_ \ 
-/ /\/\ \ (_) | | | (_| | | | |
-\/    \/\___/|_|  \__,_|_| |_|"""
+
+__author__ = "zyk"
 
 # User Agent
 UA = "Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2226.0 Safari/537.36"
@@ -75,12 +72,12 @@ class Crawl(Singleton):
         """
         user_following_url = "https://www.zhihu.com/people/" + urltoken + "/following"
         try:
-            response = requests.get(user_following_url, headers=headers)
+            response = requests.get(user_following_url, headers=headers, proxies = getproxies())
 
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 pagejson_text = soup.find_all(id='data')[0].attrs['data-state']
-                print(pagejson_text)
+                #print(pagejson_text)
                 pagejson = json.loads(pagejson_text)
             else:
                 pagejson = dict()
@@ -129,6 +126,7 @@ class Crawl(Singleton):
 
 
 if __name__ == '__main__':
-    pass
-
+    crawl = Crawl()
+    print(crawl.getinfo('excited-vczh'))
+    print(getproxies())
 
