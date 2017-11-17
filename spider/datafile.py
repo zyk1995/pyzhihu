@@ -9,9 +9,9 @@ Description
 - 类DataFile为单例模式，在程序中只有一个实例。
 - 线程安全。
 Info
-- author: "moran"
-- github: "moranzcw@gmail.com"
-- date: "2017.7.24"
+- author: "zyk"
+- github: "1251134350@qq.com"
+- date: "2017.11.17"
 """
 import threading
 import csv
