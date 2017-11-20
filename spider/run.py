@@ -18,11 +18,7 @@ from queue import Queue
 from crawl import Crawl
 from datafile import DataFile
 
-__author__ = """\
-  /\/\   ___  _ __ __ _ _ __  
- /    \ / _ \| '__/ _` | '_ \ 
-/ /\/\ \ (_) | | | (_| | | | |
-\/    \/\___/|_|  \__,_|_| |_|"""
+__author__ = 'zyk'
 
 # 任务队列，从主线程到工作线程
 task_queue = Queue(maxsize=100000)
@@ -36,7 +32,7 @@ df = DataFile()
 crawl = Crawl()
 
 # 工作线程的数量
-threads_numbers = 20
+threads_numbers = 1
 
 
 class MasterThread(Thread):
