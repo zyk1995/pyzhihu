@@ -9,14 +9,14 @@ Required
 - requests
 - bs4 (Beautiful Soup)
 Info
-- author : "moran"
-- github : "moranzcw@gmail.com"
+- author : "zyk"
+- github : "1251134350@qq.com"
 - date   : "2017.7.27"
 """
 import requests
 from bs4 import BeautifulSoup
 import json
-from proxy import getproxies
+
 
 
 __author__ = "zyk"
@@ -77,7 +77,6 @@ class Crawl(Singleton):
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
                 pagejson_text = soup.find_all(id='data')[0].attrs['data-state']
-                #print(pagejson_text)
                 pagejson = json.loads(pagejson_text)
             else:
                 pagejson = dict()

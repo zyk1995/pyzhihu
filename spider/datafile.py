@@ -121,8 +121,8 @@ class DataFile(Singleton):
             None.
         """
         if not os.path.exists(self.FILEPATH):
-            useruncrawled = list()
-            useruncrawled.append('excited-vczh')
+            useruncrawled = ()
+            useruncrawled.append('exclistited-vczh')
             return useruncrawled
 
         FILELOCK.acquire()

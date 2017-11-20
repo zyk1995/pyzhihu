@@ -32,7 +32,7 @@ df = DataFile()
 crawl = Crawl()
 
 # 工作线程的数量
-threads_numbers = 1
+threads_numbers = 10
 
 
 class MasterThread(Thread):
@@ -48,13 +48,13 @@ class MasterThread(Thread):
         Thread.__init__(self)
         # 用与log函数展示实时进度
         self.count = {
-            'crawled_count': 0,  # 已爬取用户数量
-            'task_count': 0,  # 任务数量
+            'crawled_count':  0,  # 已爬取用户数量
+            'task_count':     0,  # 任务数量
             'response_count': 0,  # 响应数量
-            'success_count': 0,  # 单位时间获取用户信息成功数量
-            'failed_count': 0,  # 单位时间获取用户失败数量
-            'data_count': 0,  # 单位时间获取用户信息的总字节数
-            'last_time': 0.0  # 上次刷新时间
+            'success_count':  0,  # 单位时间获取用户信息成功数量
+            'failed_count':   0,  # 单位时间获取用户失败数量
+            'data_count':     0,  # 单位时间获取用户信息的总字节数
+            'last_time':     0.0  # 上次刷新时间
         }
         # 从文件读取已爬取用户的list，并转换为set，用于去重
         print("加载已爬取用户列表...")
