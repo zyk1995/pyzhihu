@@ -136,25 +136,29 @@ class Proxy(Singleton):
             self.proxy_list.append('http://' + tds[1].text + ':' + tds[2].text)
 
     def get_random_ip(self, list):
+        self.count+=1
+        if self.count%1000 == 0 or len(self.proxy_list) == 0:
+            self.get_ip_list(url, headers)
         proxy_ip = random.choice(list)
         return proxy_ip
 
     def getproxies(self):
-        proxyIp = self.get_random_ip(self.proxy_list)
-        self.count+=1
-        if(self.count%1000 or len(self.proxy_list) == 0): self.get_ip_list(url, headers)
-
-        proxies = {'http': proxyIp}
+        r_ip = self.get_random_ip(self.proxy_list)
+        proxies = {'http': r_ip}
         return proxies
+
+    def getagent(self):
+        return random.choice(agents)
+
 
 if __name__ == '__main__':
     proxy = Proxy()
     proxy2 = Proxy()
-
+    print(proxy.getagent())
     for i in range(10000):
         if(i%1000 == 0) :
             print('============================')
-        print(str(i) + ':' + proxy.getproxies())
+        print(str(i) + ':' + proxy.getproxies()['http'])
     
 
 

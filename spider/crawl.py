@@ -73,6 +73,7 @@ class Crawl(Singleton):
         """
         user_following_url = "https://www.zhihu.com/people/" + urltoken + "/following"
         proxies = proxy.getproxies()
+        headers['User-Agent'] = proxy.getagent()
         try:
             response = requests.get(user_following_url, headers=headers, proxies=proxies)
 
@@ -104,7 +105,7 @@ class Crawl(Singleton):
         # 提取该用户的关注用户列表
         try:
             followinglist = pagejson['people']['followingByUser'][urltoken]['ids']
-            # 去出重复元素
+            # 取出重复元素
             tempset = set(followinglist)
             tempset.remove(None)
             followinglist = list(tempset)
