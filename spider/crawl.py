@@ -16,7 +16,7 @@ Info
 import requests
 from bs4 import BeautifulSoup
 import json
-
+from proxy import Proxy
 
 
 __author__ = "zyk"
@@ -30,7 +30,8 @@ headers = {
     "Referer": "https://www.zhihu.com/",
     "User-Agent": UA
 }
-
+#代理类
+proxy = Proxy()
 
 class Singleton(object):
     """
@@ -71,8 +72,9 @@ class Crawl(Singleton):
             None.
         """
         user_following_url = "https://www.zhihu.com/people/" + urltoken + "/following"
+        proxies = proxy.getproxies()
         try:
-            response = requests.get(user_following_url, headers=headers, proxies = getproxies())
+            response = requests.get(user_following_url, headers=headers, proxies=proxies)
 
             if response.status_code == 200:
                 soup = BeautifulSoup(response.text, 'html.parser')
@@ -126,6 +128,7 @@ class Crawl(Singleton):
 
 if __name__ == '__main__':
     crawl = Crawl()
+    #print(proxy.getproxyIp())
     print(crawl.getinfo('excited-vczh'))
-    print(getproxies())
+
 

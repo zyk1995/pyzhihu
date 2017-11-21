@@ -91,74 +91,70 @@ agents = [
     "Mozilla/5.0 (Linux; U; Android 1.6; es-es; SonyEricssonX10i Build/R1FA016) AppleWebKit/528.5  (KHTML, like Gecko) Version/3.1.2 Mobile Safari/525.20.1",  
     "Mozilla/5.0 (Linux; U; Android 1.6; en-us; SonyEricssonX10i Build/R1AA056) AppleWebKit/528.5  (KHTML, like Gecko) Version/3.1.2 Mobile Safari/525.20.1",  
 ]
-
-#url = 'http://www.xdaili.cn/freeproxy'
 url = 'http://www.xicidaili.com/nn'
 headers = {
     "Accept":"text/html,application/xhtml+xml,application/xml;",  
     "Accept-Encoding":"gzip, deflate, sdch",  
     "Accept-Language":"zh-CN,zh;q=0.8,en;q=0.6",  
     "Referer":"", 
-    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36'
+    "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
 }
+class Singleton(object):
+    """
+    实现单例模式，Proxy在程序中只有一个实例
+
+    Attributes:
+        _instance: 唯一实例的引用。
+    """
+    _instance = None
+
+    def __new__(cls, *args, **kw):
+        if not cls._instance:
+            cls._instance = super(Singleton, cls).__new__(cls, *args, **kw)
+        return cls._instance
 
 
+class Proxy(Singleton):
+    def __init__(self):
+        self.proxy_list = []
+        self.get_ip_list(url, headers)
+        self.count = 0
+    def get_ip_list(self, url, headers):
+        web_data = requests.get(url, headers=headers)
+        soup = BeautifulSoup(web_data.text, 'html.parser')
+        ips = soup.find_all('tr')
 
-proxy_list = []
-def get_ip_list(url, headers):
-    web_data = requests.get(url, headers=headers)
-    soup = BeautifulSoup(web_data.text, 'html.parser')
-    ips = soup.find_all('tr')
 
-    if(len(ips) == 0):
-        headers['User-Agent'] = random.choice(agents)
-        get_ip_list(url, headers)
-        return
-    proxy_list.clear()
-    for i in range(1, len(ips)):
-        ip_info = ips[i]
-        tds = ip_info.find_all('td')
-        proxy_list.append('http://' + tds[1].text + ':' + tds[2].text)
-
-'''
-def get_ip_list(url):
-    driver = webdriver.Chrome()
-    driver.implicitly_wait(10)  # seconds
-    driver.get("http://www.xdaili.cn/freeproxy")
-    try:
-        ips = WebDriverWait(driver, 1000).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#el-table_1_column_8 is-center"))
-        )
-        ports = WebDriverWait(driver, 1000).until(
-            EC.presence_of_all_elements_located((By.CSS_SELECTOR, "#el-table_1_column_9 is-center"))
-        )
-
-        ip_list = []
+        if(len(ips) == 0):
+            headers['User-Agent'] = random.choice(agents)
+            self.get_ip_list(url, headers)
+            return
+        self.proxy_list.clear()
         for i in range(1, len(ips)):
-            ip_list.append(ips[i] + ':' + ports[i])
-    finally:
-        pass
-'''
-count = 0
-def get_random_ip(list):
-    proxy_ip = random.choice(list)
-    return proxy_ip
+            ip_info = ips[i]
+            tds = ip_info.find_all('td')
+            self.proxy_list.append('http://' + tds[1].text + ':' + tds[2].text)
 
-def getproxies():
-    #ip_list = get_ip_list(url, headers=headers)  #xicidaili
-    #ip_list = get_ip_list(url)    #讯代理
-    global count
-    proxies = get_random_ip(proxy_list)
-    count+=1
-    if(count%1000 or len(proxy_list) == 0): get_ip_list(url, headers)
-    return proxies
+    def get_random_ip(self, list):
+        proxy_ip = random.choice(list)
+        return proxy_ip
+
+    def getproxies(self):
+        proxyIp = self.get_random_ip(self.proxy_list)
+        self.count+=1
+        if(self.count%1000 or len(self.proxy_list) == 0): self.get_ip_list(url, headers)
+
+        proxies = {'http': proxyIp}
+        return proxies
 
 if __name__ == '__main__':
-    get_ip_list(url, headers)
+    proxy = Proxy()
+    proxy2 = Proxy()
+
     for i in range(10000):
         if(i%1000 == 0) :
             print('============================')
-        print(str(i) + ':' + getproxies())
+        print(str(i) + ':' + proxy.getproxies())
     
 
 
