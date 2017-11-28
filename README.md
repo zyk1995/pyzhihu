@@ -22,22 +22,6 @@
 $ pip install -r requirments.txt
 ```
 
-打开proxy.py文件，在""处填写代理隧道验证信息：
-
-```python
-# 代理隧道验证信息
-proxyUser = ""
-proxyPass = ""
-```
-
-（笔者使用一个IP代理隧道，若需要使用普通IP代理，则需要改写getproxies函数，关于代理的细节在后文中详述。）
-
-运行：
-
-```shell
-$ python spider/run.py
-```
-
 ## 数据
 
 运行爬虫一段时间后，将会在项目目录下的datafile文件夹中找到存储数据的csv文件。
