@@ -102,38 +102,34 @@ class Crawl(Singleton):
             None.
         """
         pagejson = self.__getpagejson(urltoken)
+        # 提取该用户的关注用户列表
+        try:
+            followinglist = pagejson['people']['followingByUser'][urltoken]['ids']
+            # 取出重复元素
+            tempset = set(followinglist)
+            tempset.remove(None)
+            followinglist = list(tempset)
+            # 转换为json字符串
+            followinglist = json.dumps({'ids': followinglist})
+        except:
+            followinglist = json.dumps({'ids': list()})
 
-        if pagejson:
-            # 提取该用户的关注用户列表
-            try:
-                followinglist = pagejson['people']['followingByUser'][urltoken]['ids']
-                # 取出重复元素
-                tempset = set(followinglist)
-                tempset.remove(None)
-                followinglist = list(tempset)
-                # 转换为json字符串
-                followinglist = json.dumps({'ids': followinglist})
-            except:
-                followinglist = json.dumps({'ids': list()})
+        # 提取该用户的信息，并转换为字符串
+        try:
+            infojson = json.dumps(pagejson['entities']['users'][urltoken])
+        except:
+            infojson = ''
 
-            # 提取该用户的信息，并转换为字符串
-            try:
-                infojson = json.dumps(pagejson['entities']['users'][urltoken])
-            except:
-                infojson = ''
-
-            info = {'user_url_token': urltoken,
-                    'user_data_json': infojson,
-                    'user_following_list': followinglist
-                    }
-            return info
+        info = {'user_url_token': urltoken,
+                'user_data_json': infojson,
+                'user_following_list': followinglist
+                }
+        return info
 
 
 if __name__ == '__main__':
     crawl = Crawl()
     #print(proxy.getproxyIp())
-
-    for i in range(1000):
-        print(crawl.getinfo('excited-vczh'))
+    print(crawl.getinfo('excited-vczh'))
 
 
