@@ -33,6 +33,7 @@ headers = {
 #代理类
 proxy = Proxy()
 
+
 class Singleton(object):
     """
     实现单例模式，Crawl在程序中只有一个实例
@@ -101,32 +102,34 @@ class Crawl(Singleton):
         Raises:
             None.
         """
-        pagejson = self.__getpagejson(urltoken)
+        pagejson = []
 
-        if pagejson:
-            # 提取该用户的关注用户列表
-            try:
-                followinglist = pagejson['people']['followingByUser'][urltoken]['ids']
-                # 取出重复元素
-                tempset = set(followinglist)
-                tempset.remove(None)
-                followinglist = list(tempset)
-                # 转换为json字符串
-                followinglist = json.dumps({'ids': followinglist})
-            except:
-                followinglist = json.dumps({'ids': list()})
+        while(not pagejson):
+            pagejson = self.__getpagejson(urltoken)
 
-            # 提取该用户的信息，并转换为字符串
-            try:
-                infojson = json.dumps(pagejson['entities']['users'][urltoken])
-            except:
-                infojson = ''
+        # 提取该用户的关注用户列表
+        try:
+            followinglist = pagejson['people']['followingByUser'][urltoken]['ids']
+            # 取出重复元素
+            tempset = set(followinglist)
+            tempset.remove(None)
+            followinglist = list(tempset)
+            # 转换为json字符串
+            followinglist = json.dumps({'ids': followinglist})
+        except:
+            followinglist = json.dumps({'ids': list()})
 
-            info = {'user_url_token': urltoken,
-                    'user_data_json': infojson,
-                    'user_following_list': followinglist
-                    }
-            return info
+        # 提取该用户的信息，并转换为字符串
+        try:
+            infojson = json.dumps(pagejson['entities']['users'][urltoken])
+        except:
+            infojson = ''
+
+        info = {'user_url_token': urltoken,
+                'user_data_json': infojson,
+                'user_following_list': followinglist
+                }
+        return info
 
 
 if __name__ == '__main__':

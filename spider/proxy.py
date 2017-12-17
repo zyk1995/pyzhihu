@@ -3,6 +3,8 @@
 """
 Description
 - 获取IP代理。
+- 初次使用生成有效代理列表（length=20）
+- 每次有代理失效的时候，将其从列表中移除，并添加新的有效代理
 Info
 - author : "zyk"
 - github : "1251134350@qq.com"
@@ -13,11 +15,8 @@ __author__ = "zyk"
 from bs4 import  BeautifulSoup
 import  requests
 import  random
+import time
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 #agent池
 agents = [  
@@ -99,9 +98,10 @@ headers = {
     "Referer":"", 
     "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/53.0.2785.143 Safari/537.36"
 }
+
 class Singleton(object):
     """
-    实现单例模式，Proxy在程序中只有一个实例
+    实现单例模式，实现单例模式的类在程序中只有一个实例
 
     Attributes:
         _instance: 唯一实例的引用。
@@ -113,17 +113,28 @@ class Singleton(object):
             cls._instance = super(Singleton, cls).__new__(cls, *args, **kw)
         return cls._instance
 
-
 class Proxy(Singleton):
     def __init__(self):
+        start = time.time()
+        print('初始化代理池===============开始 计时')
         self.proxy_list = []
         self.get_ip_list(url, headers)
         self.count = 0
+        print('初始化代理池===============结束 用时 %s s' % str(time.time() - start))
+
+    def is_valid_ip(self, ip):
+        try:
+            resp = requests.get(url, headers=headers, proxies={'http':ip},timeout=1)
+        except:
+            print('%s connect failded' % ip)
+            return False
+        finally:
+            print('%s connect success' % ip)
+            return True
     def get_ip_list(self, url, headers):
         web_data = requests.get(url, headers=headers)
         soup = BeautifulSoup(web_data.text, 'html.parser')
         ips = soup.find_all('tr')
-
 
         if(len(ips) == 0):
             headers['User-Agent'] = random.choice(agents)
@@ -133,12 +144,15 @@ class Proxy(Singleton):
         for i in range(1, len(ips)):
             ip_info = ips[i]
             tds = ip_info.find_all('td')
-            self.proxy_list.append('http://' + tds[1].text + ':' + tds[2].text)
+            newip = 'http://' + tds[1].text + ':' + tds[2].text
+            if self.is_valid_ip(newip):
+                self.proxy_list.append(newip)
+
 
     def get_random_ip(self, list):
         self.count+=1
-        if self.count%1000 == 0 or len(self.proxy_list) == 0:
-            self.get_ip_list(url, headers)
+        #if self.count%10000 == 0 or len(self.proxy_list) == 0:
+        #    self.get_ip_list(url, headers)
         proxy_ip = random.choice(list)
         return proxy_ip
 
@@ -153,13 +167,9 @@ class Proxy(Singleton):
 
 if __name__ == '__main__':
     proxy = Proxy()
-    proxy2 = Proxy()
     print(proxy.getagent())
-    for i in range(10000):
-        if(i%1000 == 0) :
-            print('============================')
-        print(str(i) + ':' + proxy.getproxies()['http'])
-    
+
+
 
 
 
