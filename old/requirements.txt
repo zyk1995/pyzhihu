@@ -8,7 +8,7 @@ psutil==5.4.1
 PyInstaller==3.3
 PyMySQL==0.7.11
 requests==2.18.4
-rsa==3.4.2
+rsa==4.1
 selenium==3.7.0
 urllib3==1.22
 xlrd==1.1.0
