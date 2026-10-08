@@ -7,8 +7,10 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from spider.answers.client import ZhihuClient
-from spider.answers.errors import ZhihuError
+from spider.answers.errors import ZhihuBlockedError, ZhihuError
+from spider.answers.pace import RequestCapError
 from spider.answers.parse import paging_total, parse_answers_page
+from spider.answers.progress import format_progress, resume_notice
 from spider.answers.storage import AnswerStore
 
 
@@ -38,7 +40,19 @@ def crawl_answers(
     log(f"开始抓取问题 {question_id}「{question.get('title') or ''}」，从偏移 {offset} 继续，已有 {len(saved_ids)} 条")
 
     while True:
-        payload = client.get_answers_page(question_id, offset, page_limit)
+        try:
+            payload = client.get_answers_page(question_id, offset, page_limit)
+        except (ZhihuBlockedError, RequestCapError) as exc:
+            store.save_progress(offset, done=False, saved_count=len(saved_ids))
+            notice = str(exc) + "\n" + resume_notice(offset)
+            if isinstance(exc, ZhihuBlockedError):
+                raise ZhihuBlockedError(
+                    notice,
+                    status_code=exc.status_code,
+                    error_code=exc.error_code,
+                    body=exc.body,
+                ) from exc
+            raise RequestCapError(notice) from exc
         total = paging_total(payload)
         if total is not None and question.get("answer_count") in (None, ""):
             question["answer_count"] = total
@@ -67,7 +81,11 @@ def crawl_answers(
             store.append_answer(item)
             saved_ids.add(item["answer_id"])
         written += len(to_write)
-        log(f"偏移 {offset}：本页 {len(answers)} 条，新写入 {len(to_write)} 条，累计新写入 {written} 条")
+        total_known = question.get("answer_count") if isinstance(question.get("answer_count"), int) else None
+        log(
+            format_progress(len(saved_ids), total_known)
+            + f"  偏移 {offset}，本页新写入 {len(to_write)} 条，本次累计 {written} 条"
+        )
         if not page_complete:
             store.save_progress(offset, done=False, saved_count=len(saved_ids))
             break

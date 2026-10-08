@@ -5,5 +5,8 @@ __pycache__/
 venv/
 output/
 cookies.txt
+session.cookie
+login-qr.png
+request-count.json
 .env
 *.cookie

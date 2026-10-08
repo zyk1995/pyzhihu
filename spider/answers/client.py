@@ -12,7 +12,8 @@ from urllib.parse import quote, urlencode
 import requests
 
 from spider.answers.cookie import ensure_d_c0
-from spider.answers.errors import ZhihuBlockedError, ZhihuError
+from spider.answers.errors import ZhihuBlockedError, ZhihuError, explain_block, explain_rate_limit
+from spider.answers.pace import Pace
 from spider.answers.parse import parse_question, parse_search_questions
 from spider.answers.sign import sign_path
 
@@ -32,21 +33,26 @@ class ZhihuClient:
         self,
         cookie: str = "",
         *,
-        delay: float = 1.0,
+        delay: float | None = None,
+        allow_fast: bool = False,
+        pace: Pace | None = None,
         retries: int = 4,
         timeout: float = 20.0,
         proxy: str | None = None,
         session: requests.Session | None = None,
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
-        if delay < 0:
-            raise ZhihuError("--delay 不能为负数")
         if retries < 1:
             raise ZhihuError("--retries 至少为 1")
-        self.delay = delay
+        if pace is not None:
+            self.pace = pace
+        elif delay is None:
+            self.pace = Pace(sleep=sleep)
+        else:
+            self.pace = Pace(delay, delay, pause_every=0, allow_fast=allow_fast, sleep=sleep)
         self.retries = retries
         self.timeout = timeout
-        self.sleep = sleep
+        self.sleep = self.pace.sleep
         self.cookie, self.generated_d_c0 = ensure_d_c0(cookie)
         self.session = session or requests.Session()
         self.proxies = {"http": proxy, "https": proxy} if proxy else None
@@ -93,11 +99,21 @@ class ZhihuClient:
             referer=f"https://www.zhihu.com/question/{question_id}",
         )
 
+    def get_me(self) -> dict:
+        """当前登录用户。用来判断本地会话是否还有效。"""
+        return self.get_json(
+            "/api/v4/me",
+            [("include", "name,url_token,uid")],
+            referer="https://www.zhihu.com/",
+        )
+
     def get_json(self, path: str, params: list[tuple[str, str]], *, referer: str) -> dict:
         query = urlencode(params)
         path_and_query = f"{path}?{query}" if query else path
         url = BASE_URL + path_and_query
+        self.pace.before("answer" if path.rstrip("/").endswith("/answers") else "other")
         last_error: Exception | None = None
+        rate_hits = 0
         for attempt in range(1, self.retries + 1):
             headers = self._headers(path_and_query, referer)
             try:
@@ -120,12 +136,20 @@ class ZhihuClient:
                 raise
             except _Retryable as exc:
                 last_error = exc
+                if exc.status == 429:
+                    rate_hits += 1
+                    if rate_hits >= 2 or attempt >= self.retries:
+                        raise ZhihuBlockedError(
+                            explain_rate_limit(rate_hits) + "已停止继续请求，避免把风控打得更严。",
+                            status_code=429,
+                            error_code=429,
+                        )
+                    self.sleep(max(20.0, self.pace.pause_min))
+                    continue
                 if attempt >= self.retries:
                     break
                 self.sleep(self._backoff(attempt))
                 continue
-            if self.delay:
-                self.sleep(self.delay)
             return payload
         raise ZhihuError(f"请求失败，已重试 {self.retries} 次：{url} ({last_error})")
 
@@ -158,7 +182,7 @@ class ZhihuClient:
                 text,
             )
         if status in (429, 500, 502, 503, 504):
-            raise _Retryable(f"HTTP {status}")
+            raise _Retryable(f"HTTP {status}", status=status)
         payload = _load_json(text)
         if payload is None:
             if status >= 400:
@@ -174,6 +198,8 @@ class ZhihuClient:
             blocked = status in (401, 403) or (isinstance(code, int) and code in _HARD_BLOCK_CODES)
             if isinstance(error, dict) and error.get("need_login"):
                 blocked = True
+            if "验证码" in message or "安全验证" in message:
+                blocked = True
             if blocked:
                 raise self._blocked(status, code, message or "访问被拒绝", text)
             if status == 404:
@@ -184,22 +210,8 @@ class ZhihuClient:
         return payload
 
     def _blocked(self, status: int, code: int | str | None, raw_message: str, body: str) -> ZhihuBlockedError:
-        hint = [
-            f"知乎拒绝访问（HTTP {status}，错误码 {code}）。",
-            f"接口原文：{raw_message}",
-        ]
-        if self.generated_d_c0:
-            hint.append("本次没有可用的浏览器 Cookie（或其中没有 d_c0），只附带了本地生成的 d_c0，知乎通常不接受。")
-        else:
-            hint.append("已经带上了你提供的 Cookie，仍然被拒绝。")
-        hint.append(
-            "请在自己的浏览器登录知乎，从开发者工具的请求头复制整段 Cookie，"
-            "通过环境变量 ZHIHU_COOKIE 或参数 --cookie-file 提供，不要把 Cookie 提交到仓库。"
-            "Cookie 需要包含 d_c0，登录态一般还要有 z_c0。"
-            "知乎常把 Cookie 与出口 IP 绑定，云主机或机房 IP 即使带上家用浏览器的 Cookie 仍可能失败。"
-        )
         return ZhihuBlockedError(
-            "\n".join(hint),
+            explain_block(status, code, raw_message),
             status_code=status,
             error_code=code,
             body=body[:500],
@@ -212,6 +224,10 @@ class ZhihuClient:
 
 class _Retryable(ZhihuError):
     """5xx / 429，由客户端内部重试。"""
+
+    def __init__(self, message: str, *, status: int | None = None) -> None:
+        super().__init__(message)
+        self.status = status
 
 
 def _load_json(text: str) -> dict | None:

@@ -53,7 +53,14 @@ class _Session:
 class CrawlFlowTest(unittest.TestCase):
     def _client(self, handler, sleeps: list[float]) -> tuple[ZhihuClient, _Session]:
         session = _Session(handler)
-        client = ZhihuClient("d_c0=abc|1", delay=0, retries=2, session=session, sleep=sleeps.append)
+        client = ZhihuClient(
+            "d_c0=abc|1",
+            delay=0,
+            allow_fast=True,
+            retries=2,
+            session=session,
+            sleep=sleeps.append,
+        )
         return client, session
 
     def test_paginates_then_resumes_without_duplicates(self) -> None:
@@ -124,6 +131,24 @@ class CrawlFlowTest(unittest.TestCase):
         self.assertIn("40362", str(caught.exception))
         self.assertIn("ZHIHU_COOKIE", str(caught.exception))
         self.assertIn("您当前请求存在异常", str(caught.exception))
+
+    def test_risk_control_stops_and_keeps_offset(self) -> None:
+        def handler(url, _headers):
+            offset = int(parse_qs(urlparse(url).query)["offset"][0])
+            if offset >= 2:
+                return _Response(403, {"error": {"code": 40362, "message": "您当前请求存在异常，暂时限制本次访问。"}})
+            return _Response(200, _page([_answer(1, "一")], offset=0, limit=2, is_end=False, total=4))
+
+        sleeps: list[float] = []
+        client, _session = self._client(handler, sleeps)
+        store = AnswerStore(self._tmp(), "77")
+        with self.assertRaises(ZhihuBlockedError) as caught:
+            crawl_answers(client, store, {"id": "77", "title": "风控", "answer_count": 4, "follower_count": 1}, page_limit=2)
+        self.assertIn("40362", str(caught.exception))
+        self.assertIn("继续", str(caught.exception))
+        self.assertEqual(store.load_progress()["next_offset"], 2)
+        self.assertFalse(store.load_progress()["done"])
+        self.assertEqual(store.load_saved_ids(), {"1"})
 
     def test_retries_server_error(self) -> None:
         state = {"n": 0}
